@@ -9,6 +9,7 @@
 import RxTest
 import RxSwift
 import SwiftUtilities
+import SwiftUtilitiesTests
 import XCTest
 
 fileprivate let validationDelay: RxTimeInterval = 0.1
@@ -24,6 +25,28 @@ final class InputDataTest: XCTestCase {
         disposeBag = DisposeBag()
         validator = MockInputValidator()
         scheduler = TestScheduler(initialClock: 0)
+    }
+    
+    override func tearDown() {
+        super.tearDown()
+        disposeBag = nil
+    }
+    
+    func test_inputData_shouldBeEmptyAtFirst() {
+        // Setup
+        let observer = scheduler.createObserver(String.self)
+        
+        // When
+        Observable.from([MockInput.input1, .input2, .input3])
+            .map(InputData.init)
+            .flatMap({$0.asObservable()})
+            .subscribe(observer)
+            .addDisposableTo(disposeBag)
+        
+        // Then
+        let nextEvents = observer.nextElements()
+        XCTAssertFalse(nextEvents.isEmpty)
+        XCTAssertTrue(nextEvents.all(satisfying: {$0.isEmpty}))
     }
     
     func test_inputValidator_shouldSucceed() {
@@ -60,8 +83,8 @@ final class InputDataTest: XCTestCase {
             .flatMap({data in
                 return self.validator.rxa_validateAll(inputs: data)
                     .subscribeOn(qos: .background)
-                    .logNext()
                     .doOnNext({
+                        // Then
                         if data.any(satisfying: {$0.isEmpty && $0.isRequired}) {
                             let emptyError = "input.error.required".localized
                             XCTAssertTrue($0.hasErrors)
@@ -94,7 +117,8 @@ final class InputDataTest: XCTestCase {
     
     func test_requiredInputWatcher_shouldWork() {
         // Setup
-        let observer = scheduler.createObserver(Bool.self)
+        let observer1 = scheduler.createObserver(Bool.self)
+        let observer2 = scheduler.createObserver(InputContentType.self)
         let input1 = MockInput(required: true, throwValidatorError: false)
         let input2 = MockInput(required: true, throwValidatorError: false)
         let input3 = MockInput(required: false, throwValidatorError: false)
@@ -104,23 +128,25 @@ final class InputDataTest: XCTestCase {
         let inputData = [inputData1, inputData2, inputData3]
         
         // When
-        validator
-            .rxv_requiredInputFilled(inputs: inputData)
-            .logNext()
-            .subscribe(observer)
+        validator.rxv_requiredInputFilled(inputs: inputData)
+            .subscribe(observer1)
             .addDisposableTo(disposeBag)
         
-        for _ in 0..<1000 {
+        validator.rxe_emptyRequiredInputs(inputs: inputData)
+            .subscribe(observer2)
+            .addDisposableTo(disposeBag)
+        
+        for _ in 0..<5 {
             let randomInput = inputData.randomElement()!
             randomInput.inputContent = Bool.random() ? "Valid" : ""
             
             // Then
-            let anyEmptyRequired = inputData.any(satisfying: {
-                $0.isRequired && $0.isEmpty
-            })
-            
-            let lastEvent = observer.events.last?.value.element!
-            XCTAssertNotEqual(lastEvent, anyEmptyRequired)
+            let failed = inputData.any(satisfying: {$0.isRequired && $0.isEmpty})
+            let lastEvent1 = observer1.events.last?.value.element!
+            let events2 = observer2.nextElements()
+            XCTAssertFalse(events2.isEmpty)
+            XCTAssertNotEqual(lastEvent1, failed)
+            XCTAssertTrue(events2.all(satisfying: {$0.isEmpty}))
         }
     }
 }
