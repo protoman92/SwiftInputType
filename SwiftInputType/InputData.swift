@@ -29,12 +29,17 @@ public extension InputIdentifierType {
 }
 
 /// Implement this protocol to deliver input content.
-public protocol InputContentType {
+public protocol InputContentType: InputIdentifierType {
+    /// Get the associated InputType.
+    var inputModel: InputType { get }
+    
     // This is the user' input String.
     var inputContent: String { get }
     
-    /// Check whether the input is required.
-    var isRequired: Bool { get }
+    /// Initialize with an InputType instance.
+    ///
+    /// - Parameter input: An InputType instance.
+    init(`for` input: InputType)
 }
 
 public extension InputContentType {
@@ -47,31 +52,6 @@ public extension InputContentType {
     public var isNotEmpty: Bool {
         return !isEmpty
     }
-}
-
-/// Encompasses all InputData functionalities. Built on top of 
-/// InputContentType.
-public protocol InputDataType: InputIdentifierType, InputContentType {
-    
-    /// Initialize with an InputType instance.
-    ///
-    /// - Parameter input: An InputType instance.
-    init(`for` input: InputType)
-    
-    /// Get the associated InputType.
-    var inputModel: InputType { get }
-    
-    /// Override inputContent to provide setter.
-    var inputContent: String { get set }
-    
-    /// Get an InputContentType Observable.
-    var inputObservable: Observable<InputContentType> { get }
-    
-    /// Get an InputContentType Observer.
-    var inputObserver: AnyObserver<InputContentType> { get }
-}
-
-public extension InputDataType {
     
     /// Return identifier.
     public var inputIdentifier: String {
@@ -82,6 +62,20 @@ public extension InputDataType {
     public var isRequired: Bool {
         return inputModel.isRequired
     }
+}
+
+/// Encompasses all InputData functionalities. Built on top of InputContentType
+/// with additional reactive functionalities.
+public protocol InputDataType: InputContentType {
+    
+    /// Override inputContent to provide setter.
+    var inputContent: String { get set }
+    
+    /// Get an InputContentType Observable.
+    var inputObservable: Observable<InputContentType> { get }
+    
+    /// Get an InputContentType Observer.
+    var inputObserver: AnyObserver<InputContentType> { get }
 }
 
 /// Use this class to hold input information (such as the input identifier
@@ -100,7 +94,7 @@ public final class InputData {
     /// Here a BehaviorSubject is used because we want to emit empty input
     /// as well. If we use a PublishSubject, the empty input will be omitted.
     fileprivate lazy var inputSubject: BehaviorSubject<InputContentType> =
-        BehaviorSubject<InputContentType>(value: Input.empty)
+        BehaviorSubject<InputContentType>(value: Input(input: self))
     
     /// Validate inputs when they are confirmed.
     fileprivate var validator: InputValidatorType?
@@ -119,54 +113,42 @@ public final class InputData {
             .subscribe()
             .addDisposableTo(disposeBag)
     }
+    
+    deinit {
+        debugPrint("Deinitialized \(self)")
+    }
 }
 
 public extension InputData {
     
     /// Use this struct to deliver content, instead of the main InputData,
     /// since it may lead to a resource leak.
-    fileprivate struct Input {
-        fileprivate var identifier: String
+    fileprivate class Input {
+        fileprivate let input: InputType
         fileprivate var content: String
-        fileprivate var required: Bool
         
-        fileprivate init() {
-            identifier = ""
+        fileprivate required init(for input: InputType) {
+            self.input = input
             content = ""
-            required = false
         }
         
-        fileprivate init(input: InputDataType) {
-            self.identifier = input.inputIdentifier
-            self.content = input.inputContent
-            self.required = input.isRequired
+        fileprivate convenience init(input: InputDataType) {
+            self.init(for: input.inputModel)
+            content = input.inputContent
         }
     }
 }
 
 extension InputData.Input: InputContentType {
     
-    /// Return identifier.
-    public var inputIdentifier: String {
-        return identifier
+    /// Get the associated InputType.
+    var inputModel: InputType {
+        return input
     }
     
     /// Return input content.
     public var inputContent: String {
         return content
-    }
-    
-    /// Return required.
-    public var isRequired: Bool {
-        return required
-    }
-}
-
-fileprivate extension InputData.Input {
-    
-    /// Use this for when we don't want to pass any content.
-    fileprivate static var empty: InputData.Input {
-        return InputData.Input()
     }
 }
 
@@ -180,17 +162,6 @@ fileprivate extension InputData {
             let input = Input(input: current)
             current.inputObserver.onNext(input)
         }
-    }
-}
-
-extension InputData: ObservableConvertibleType {
-    public typealias E = String
-    
-    /// Return an Observable that emits changes to this InputData.
-    ///
-    /// - Returns: An Observable instance.
-    public func asObservable() -> Observable<String> {
-        return content.asObservable()
     }
 }
 

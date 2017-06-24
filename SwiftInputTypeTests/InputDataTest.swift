@@ -39,7 +39,8 @@ final class InputDataTest: XCTestCase {
         // When
         Observable.from([MockInput.input1, .input2, .input3])
             .map(InputData.init)
-            .flatMap({$0.asObservable()})
+            .flatMap({$0.inputObservable})
+            .map({$0.inputContent})
             .subscribe(observer)
             .addDisposableTo(disposeBag)
         
@@ -114,6 +115,15 @@ final class InputDataTest: XCTestCase {
         
         waitForExpectations(timeout: 5, handler: nil)
     }
+
+    
+    func test_validateLatest_shouldWork() {
+        // Setup
+        
+        // When
+        
+        // Then
+    }
     
     func test_requiredInputWatcher_shouldWork() {
         // Setup
@@ -128,11 +138,11 @@ final class InputDataTest: XCTestCase {
         let inputData = [inputData1, inputData2, inputData3]
         
         // When
-        validator.rxv_requiredInputFilled(inputs: inputData)
+        validator.rxv_requiredInputFilledLatest(inputs: inputData)
             .subscribe(observer1)
             .addDisposableTo(disposeBag)
         
-        validator.rxe_emptyRequiredInputs(inputs: inputData)
+        validator.rxe_emptyRequiredInputsLatest(inputs: inputData)
             .subscribe(observer2)
             .addDisposableTo(disposeBag)
         
@@ -188,9 +198,9 @@ extension MockInput: InputType {
 }
 
 extension MockInputValidator: InputValidatorType {
-    func rxa_validate<S: Sequence>(input: InputDataType, against inputs: S)
+    func rxa_validate<S: Sequence>(input: InputContentType, against inputs: S)
         -> Observable<InputNotificationComponentType>
-        where S.Iterator.Element : InputDataType
+        where S.Iterator.Element == InputContentType
     {
         let mockInput = input.inputModel as! MockInput
         
