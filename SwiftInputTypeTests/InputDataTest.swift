@@ -13,83 +13,14 @@ import XCTest
 class InputDataTest: XCTestCase {
     fileprivate var disposeBag: DisposeBag!
     fileprivate var scheduler: TestScheduler!
+    fileprivate var validator: MockInputValidator!
     
     override func setUp() {
         super.setUp()
         continueAfterFailure = false
         disposeBag = DisposeBag()
+        validator = MockInputValidator()
         scheduler = TestScheduler(initialClock: 0)
-    }
-    
-    func test_inputDataAsObservable_shouldSucceed() {
-        // Setup
-        let observer = scheduler.createObserver(Any.self)
-        
-        let input1 = InputData.builder()
-            .with(input: MockInput.input1)
-            .build()
-        
-        let input2 = InputData.builder()
-            .with(input: MockInput.input2)
-            .build()
-        
-        let input3 = InputData.builder()
-            .with(input: MockInput.input3)
-            .build()
-        
-        let inputs = [input1, input2, input3]
-        
-        // When
-        _ = inputs.rxInputObservables()
-            .logNext()
-            .cast(to: Any.self)
-            .subscribe(observer)
-        
-        input1.inputContent = ""
-        input2.inputContent = ""
-        input3.inputContent = ""
-        input1.inputContent = "Test input 1"
-        input2.inputContent = "Test input 2"
-        input3.inputContent = "Test input 3"
-        input1.inputContent = "Test input 1-1"
-        input2.inputContent = "Test input 2-2"
-        input3.inputContent = "Test input 3-3"
-        
-        // Then
-        print(observer.events.count)
-    }
-    
-    func test_inputDataContentListener_shouldSucceed() {
-        // Setup
-        let observer = scheduler.createObserver(Any.self)
-        let subject = PublishSubject<String>()
-        
-        let input1 = InputData.builder()
-            .with(input: MockInput.input1)
-            .build()
-        
-        let input2 = InputData.builder()
-            .with(input: MockInput.input2)
-            .build()
-        
-        let input3 = InputData.builder()
-            .with(input: MockInput.input3)
-            .build()
-        
-        // When
-        _ = subject
-            .doOnNext(input1.onNext)
-            .doOnNext(input2.onNext)
-            .doOnNext(input3.onNext)
-            .cast(to: Any.self)
-            .subscribe(observer)
-        
-        subject.onNext("Test1")
-        subject.onNext("Test2")
-        subject.onNext("Test3")
-        
-        // Then
-        print(observer.events)
     }
     
     func test_inputValidator_shouldSucceed() {
@@ -100,7 +31,7 @@ class InputDataTest: XCTestCase {
         
         // When
         confirmSubject
-            .flatMap({_ in inputData.rxValidate()})
+            .flatMap({_ in self.validator.rxa_validate(inputs: inputData)})
             .subscribe(observer)
             .addDisposableTo(disposeBag)
         
@@ -114,20 +45,9 @@ class InputDataTest: XCTestCase {
             let input3 = MockInput(required: Bool.random(),
                                    throwValidatorError: Bool.random())
             
-            let inputData1 = InputData.builder()
-                .with(input: input1)
-                .with(inputValidator: input1)
-                .build()
-            
-            let inputData2 = InputData.builder()
-                .with(input: input2)
-                .with(inputValidator: input2)
-                .build()
-            
-            let inputData3 = InputData.builder()
-                .with(input: input3)
-                .with(inputValidator: input3)
-                .build()
+            let inputData1 = InputData.builder().with(input: input1).build()
+            let inputData2 = InputData.builder().with(input: input2).build()
+            let inputData3 = InputData.builder().with(input: input3).build()
             
             let inputs = [input1, input2, input3]
             inputData = [inputData1, inputData2, inputData3]
@@ -141,11 +61,7 @@ class InputDataTest: XCTestCase {
             
             if inputData.any(satisfying: {$0.isEmpty && $0.isRequired}) {
                 XCTAssertTrue(lastEvent.hasErrors)
-                
-                XCTAssertTrue(lastEvent.outputs.any(satisfying: {
-                    $0.value == "input.error.required".localized
-                }))
-                
+                XCTAssertTrue(lastEvent.hasError("input.error.required".localized))
             } else {
                 let invalidInputs = inputs.filter({$0.throwValidatorError})
                 
@@ -174,7 +90,9 @@ class InputDataTest: XCTestCase {
         let inputData = [inputData1, inputData2, inputData3]
         
         // When
-        _ = inputData.rxAllRequiredInputFilled().subscribe(observer)
+        _ = validator
+            .rxv_allRequiredInputFilled(inputs: inputData)
+            .subscribe(observer)
         
         for _ in 0..<1000 {
             let randomInput = inputData.randomElement()!
@@ -214,21 +132,35 @@ class MockInput {
     }
 }
 
+class MockInputValidator {}
+
 extension MockInput: CustomStringConvertible {
     var description: String {
         return "\(required)-\(throwValidatorError)-\(count)"
     }
 }
 
-extension MockInput: InputDetailType {
+extension MockInput: InputType {
     var identifier: String { return String(describing: self) }
     var isRequired: Bool { return required }
 }
 
-extension MockInput: InputValidatorType {
-    func validate<S: Sequence>(input: InputDataType, against inputs: S)
-        throws where S.Iterator.Element : InputDataType
+extension MockInputValidator: InputValidatorType {
+    func rxa_validate<S: Sequence>(input: InputDataType, against inputs: S)
+        -> Observable<InputNotificationComponentType>
+        where S.Iterator.Element : InputDataType
     {
-        if throwValidatorError { throw Exception("Error!!!") }
+        let mockInput = input.inputModel as! MockInput
+        
+        let builder = InputNotification.componentBuilder()
+            .with(keyProvider: input)
+            .with(valueProvider: input)
+        
+        if mockInput.throwValidatorError {
+            builder.with(error: "Invalid input")
+        }
+        
+        let component = builder.build()
+        return Observable.just(component)
     }
 }

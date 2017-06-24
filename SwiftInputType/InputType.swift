@@ -11,7 +11,7 @@ import UIKit
 /// Implement this protocol to provide input instances. Usually we can use
 /// an enum for this purpose. Each instance shall provide the necessary
 /// information for an input.
-public protocol InputDetailType {
+public protocol InputType {
     
     /// The input's identifier.
     var identifier: String { get }

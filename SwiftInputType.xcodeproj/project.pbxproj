@@ -14,6 +14,11 @@
 		D33FBDCB1EFD0C3500642005 /* InputNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33FBDC81EFD0C3500642005 /* InputNotification.swift */; };
 		D33FBDCC1EFD0C3500642005 /* InputType.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33FBDC91EFD0C3500642005 /* InputType.swift */; };
 		D33FBDCE1EFD0C4300642005 /* InputDataTest.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33FBDCD1EFD0C4300642005 /* InputDataTest.swift */; };
+		D3B3A51E1EFE00040094461C /* InputValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3B3A51D1EFE00040094461C /* InputValidator.swift */; };
+		D3B3A51F1EFE15630094461C /* InputData.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33FBDC71EFD0C3500642005 /* InputData.swift */; };
+		D3B3A5201EFE15630094461C /* InputNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33FBDC81EFD0C3500642005 /* InputNotification.swift */; };
+		D3B3A5211EFE15630094461C /* InputType.swift in Sources */ = {isa = PBXBuildFile; fileRef = D33FBDC91EFD0C3500642005 /* InputType.swift */; };
+		D3B3A5221EFE15630094461C /* InputValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = D3B3A51D1EFE00040094461C /* InputValidator.swift */; };
 		EEB966B6E953FF690033DDCF /* Pods_SwiftInputType.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A420FE423BAF6118B6D4B542 /* Pods_SwiftInputType.framework */; };
 /* End PBXBuildFile section */
 
@@ -41,6 +46,7 @@
 		D33FBDC81EFD0C3500642005 /* InputNotification.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InputNotification.swift; sourceTree = "<group>"; };
 		D33FBDC91EFD0C3500642005 /* InputType.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InputType.swift; sourceTree = "<group>"; };
 		D33FBDCD1EFD0C4300642005 /* InputDataTest.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InputDataTest.swift; sourceTree = "<group>"; };
+		D3B3A51D1EFE00040094461C /* InputValidator.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = InputValidator.swift; sourceTree = "<group>"; };
 		E7094456FA302449DC57E7B0 /* Pods-SwiftInputTypeTests.debug.xcconfig */ = {isa = PBXFileReference; includeInIndex = 1; lastKnownFileType = text.xcconfig; name = "Pods-SwiftInputTypeTests.debug.xcconfig"; path = "Pods/Target Support Files/Pods-SwiftInputTypeTests/Pods-SwiftInputTypeTests.debug.xcconfig"; sourceTree = "<group>"; };
 		FB2DCBF3273618D702EBE6C9 /* Pods_SwiftInputTypeTests.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Pods_SwiftInputTypeTests.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 /* End PBXFileReference section */
@@ -114,6 +120,7 @@
 				D33FBDC91EFD0C3500642005 /* InputType.swift */,
 				D33FBDB01EFD013800642005 /* SwiftInputType.h */,
 				D33FBDB11EFD013800642005 /* Info.plist */,
+				D3B3A51D1EFE00040094461C /* InputValidator.swift */,
 			);
 			path = SwiftInputType;
 			sourceTree = "<group>";
@@ -325,6 +332,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				D33FBDCC1EFD0C3500642005 /* InputType.swift in Sources */,
+				D3B3A51E1EFE00040094461C /* InputValidator.swift in Sources */,
 				D33FBDCA1EFD0C3500642005 /* InputData.swift in Sources */,
 				D33FBDCB1EFD0C3500642005 /* InputNotification.swift in Sources */,
 			);
@@ -334,6 +342,10 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				D3B3A51F1EFE15630094461C /* InputData.swift in Sources */,
+				D3B3A5201EFE15630094461C /* InputNotification.swift in Sources */,
+				D3B3A5211EFE15630094461C /* InputType.swift in Sources */,
+				D3B3A5221EFE15630094461C /* InputValidator.swift in Sources */,
 				D33FBDCE1EFD0C4300642005 /* InputDataTest.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
