@@ -115,12 +115,12 @@
 		D33FBDAF1EFD013800642005 /* SwiftInputType */ = {
 			isa = PBXGroup;
 			children = (
+				D33FBDB11EFD013800642005 /* Info.plist */,
 				D33FBDC71EFD0C3500642005 /* InputData.swift */,
 				D33FBDC81EFD0C3500642005 /* InputNotification.swift */,
 				D33FBDC91EFD0C3500642005 /* InputType.swift */,
-				D33FBDB01EFD013800642005 /* SwiftInputType.h */,
-				D33FBDB11EFD013800642005 /* Info.plist */,
 				D3B3A51D1EFE00040094461C /* InputValidator.swift */,
+				D33FBDB01EFD013800642005 /* SwiftInputType.h */,
 			);
 			path = SwiftInputType;
 			sourceTree = "<group>";

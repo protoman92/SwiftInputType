@@ -11,9 +11,21 @@ import RxSwift
 
 /// Implement this protocol to provide input identifier.
 public protocol InputIdentifierType {
+    
     // This should be a enum string value so that later we can perform input
     // validation easily.
     var inputIdentifier: String { get }
+}
+
+public extension InputIdentifierType {
+    
+    /// Check if the input identifier is equal to another identifier.
+    ///
+    /// - Parameter identifier: A String value.
+    /// - Returns: A Bool value.
+    public func hasIdentifier(_ identifier: String) -> Bool {
+        return inputIdentifier == identifier
+    }
 }
 
 /// Implement this protocol to deliver input content.
@@ -23,35 +35,62 @@ public protocol InputContentType {
     
     /// Check whether the input is required.
     var isRequired: Bool { get }
+}
+
+public extension InputContentType {
+    /// Check whether inputContent is empty.
+    public var isEmpty: Bool {
+        return inputContent.isEmpty
+    }
     
-    /// Check if input content is empty.
-    var isEmpty: Bool { get }
+    /// Check whether inputContent is not empty.
+    public var isNotEmpty: Bool {
+        return !isEmpty
+    }
 }
 
 /// Encompasses all InputData functionalities. Built on top of 
 /// InputContentType.
 public protocol InputDataType: InputIdentifierType, InputContentType {
     
+    /// Initialize with an InputType instance.
+    ///
+    /// - Parameter input: An InputType instance.
+    init(`for` input: InputType)
+    
     /// Get the associated InputType.
-    var inputModel: InputType? { get }
+    var inputModel: InputType { get }
     
     /// Override inputContent to provide setter.
     var inputContent: String { get set }
     
-    /// Get an InputDataType Observable.
+    /// Get an InputContentType Observable.
     var inputObservable: Observable<InputContentType> { get }
     
-    /// Get an InputDataType Observer.
+    /// Get an InputContentType Observer.
     var inputObserver: AnyObserver<InputContentType> { get }
+}
+
+public extension InputDataType {
+    
+    /// Return identifier.
+    public var inputIdentifier: String {
+        return inputModel.identifier
+    }
+    
+    /// Return isRequired.
+    public var isRequired: Bool {
+        return inputModel.isRequired
+    }
 }
 
 /// Use this class to hold input information (such as the input identifier
 /// and the current input). Objects of type InputData can be wrapped in a
 /// RxSwift Variable to watch for content changes.
-public class InputData {
+public final class InputData {
     
     /// Get the input identifier and isRequired flag from this.
-    fileprivate var input: InputType?
+    fileprivate let input: InputType
     
     // This is the user' input.
     fileprivate let content: Variable<String>
@@ -68,7 +107,8 @@ public class InputData {
     
     fileprivate let disposeBag: DisposeBag
     
-    fileprivate init() {
+    public init(`for` input: InputType) {
+        self.input = input
         content = Variable("")
         disposeBag = DisposeBag()
         
@@ -78,41 +118,6 @@ public class InputData {
             })
             .subscribe()
             .addDisposableTo(disposeBag)
-    }
-}
-
-public extension InputData {
-    
-    /// Return a Builder instance.
-    ///
-    /// - Returns: A Builder instance.
-    public static func builder() -> Builder {
-        return Builder()
-    }
-    
-    /// Buider class for InputData.
-    public struct Builder {
-        fileprivate let inputData: InputData
-        
-        fileprivate init() {
-            inputData = InputData()
-        }
-        
-        /// Set the inputData's input.
-        ///
-        /// - Parameter input: An InputType instance.
-        /// - Returns: The current Builder instance.
-        public func with(input: InputType) -> Builder {
-            inputData.input = input
-            return self
-        }
-        
-        /// Return inputData.
-        ///
-        /// - Returns: An InputData instance.
-        public func build() -> InputData {
-            return inputData
-        }
     }
 }
 
@@ -155,11 +160,6 @@ extension InputData.Input: InputContentType {
     public var isRequired: Bool {
         return required
     }
-    
-    /// Check whether inputContent is empty.
-    public var isEmpty: Bool {
-        return inputContent.isEmpty
-    }
 }
 
 fileprivate extension InputData.Input {
@@ -197,39 +197,14 @@ extension InputData: ObservableConvertibleType {
 extension InputData: InputDataType {
     
     /// Get the associated input.
-    public var inputModel: InputType? {
+    public var inputModel: InputType {
         return input
-    }
-    
-    /// Return identifier.
-    public var inputIdentifier: String {
-        guard let input = self.input else {
-            debugException()
-            return ""
-        }
-        
-        return input.identifier
-    }
-    
-    /// Return isRequired.
-    public var isRequired: Bool {
-        guard let input = self.input else {
-            debugException()
-            return false
-        }
-        
-        return input.isRequired
     }
     
     /// Return content.
     public var inputContent: String {
         get { return content.value }
         set { content.value = newValue }
-    }
-    
-    /// Return validator.
-    public var inputValidator: InputValidatorType? {
-        return validator
     }
     
     /// Return inputSubject as an Observable.
@@ -240,11 +215,6 @@ extension InputData: InputDataType {
     /// Return inputSubject as an Observer.
     public var inputObserver: AnyObserver<InputContentType> {
         return inputSubject.asObserver()
-    }
-    
-    /// Check whether the input is empty.
-    public var isEmpty: Bool {
-        return inputContent.isEmpty
     }
 }
 

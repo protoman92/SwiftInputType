@@ -7,6 +7,7 @@
 //
 
 import RxSwift
+import SwiftUtilities
 
 /// Implement this protocol to provide validation.
 public protocol InputValidatorType {
@@ -24,14 +25,29 @@ public protocol InputValidatorType {
 
 public extension InputValidatorType {
     
+    /// Get all empty required inputs. We can subscribe to this Observable
+    /// to be notified when an InputDataType was recently emptied.
+    ///
+    /// - Parameter inputs: Sequence of InputDataType.
+    /// - Returns: An Observable instance.
+    public func rxe_emptyRequiredInputs<S: Sequence>(inputs: S)
+        -> Observable<InputContentType>
+        where S.Iterator.Element: InputDataType
+    {
+        return Observable
+            .combineLatest(inputs.map({$0.inputObservable}), eq)
+            .flatMap({data in Observable.from(data)})
+            .filter({$0.isEmpty})
+    }
+    
     /// Check whether all required inputs have been filled.
     ///
     /// - Returns: An Observable instance.
-    public func rxv_allRequiredInputFilled<S: Sequence>(inputs: S)
+    public func rxv_requiredInputFilled<S: Sequence>(inputs: S)
         -> Observable<Bool> where S.Iterator.Element: InputDataType
     {
         return Observable.combineLatest(inputs.map({$0.inputObservable}), {
-            return $0.any(satisfying: {$0.isRequired && $0.isEmpty})
+            return !$0.any(satisfying: {$0.isRequired && $0.isEmpty})
         })
     }
     
@@ -59,7 +75,9 @@ public extension InputValidatorType {
             
             return Observable.just(component)
         } else {
-            return rxa_validate(input: input, against: inputs)
+            return self
+                .rxa_validate(input: input, against: inputs)
+                .subscribeOn(qos: .background)
         }
     }
     
@@ -68,13 +86,23 @@ public extension InputValidatorType {
     /// - Parameter inputs: Sequence of InputDataType.
     /// - Returns: Observable instance.
     public func rxa_validate<S: Sequence>(inputs: S)
-        -> Observable<InputNotificationType>
+        -> Observable<InputNotificationComponentType>
         where S.Iterator.Element: InputDataType
     {
         return Observable.from(inputs)
             .flatMap({self.rxa_requiredAndValidate(input: $0, against: inputs)})
-            .toArray()
-            .map(InputNotification.init)
             .observeOn(MainScheduler.instance)
+    }
+    
+    /// Validate multiple InputDataType and concatenate all 
+    /// InputNotificationComponentType into one InputNotificationType.
+    ///
+    /// - Parameter inputs: Sequence of InputDataType.
+    /// - Returns: An Observable instance.
+    public func rxa_validateAll<S: Sequence>(inputs: S)
+        -> Observable<InputNotificationType>
+        where S.Iterator.Element: InputDataType
+    {
+        return rxa_validate(inputs: inputs).toArray().map(InputNotification.init)
     }
 }

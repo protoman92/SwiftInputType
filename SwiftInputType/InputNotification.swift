@@ -90,7 +90,7 @@ public extension InputNotification.Component {
     public final class Builder {
         private var component: InputNotification.Component
         
-        init() {
+        fileprivate init() {
             component = InputNotification.Component()
         }
         
