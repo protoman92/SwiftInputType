@@ -115,7 +115,7 @@ public final class InputData {
     }
     
     deinit {
-        debugPrint("Deinitialized \(self)")
+//        debugPrint("Deinitialized \(self)")
     }
 }
 
@@ -201,7 +201,7 @@ extension InputData: Equatable {}
 
 extension InputData: CustomStringConvertible {
     public var description: String {
-        return "Content: \(inputContent), Required: \(isRequired)"
+        return "id: \(inputIdentifier), Content: \(inputContent), Required: \(isRequired)"
     }
 }
 
@@ -212,6 +212,12 @@ extension InputData: CustomComparisonType {
         }
         
         return false
+    }
+}
+
+extension InputData.Input: CustomStringConvertible {
+    public var description: String {
+        return "id: \(inputIdentifier), Content: \(inputContent), Required: \(isRequired)"
     }
 }
 

@@ -211,12 +211,12 @@ extension InputNotification: InputNotificationType {
 
 extension InputNotification.Component: CustomStringConvertible {
     public var description: String {
-        return "hasErrors: \(hasError), value: \(value), error: \(error)"
+        return "id: \(key), value: \(value), error: \(error)"
     }
 }
 
 extension InputNotification: CustomStringConvertible {
     public var description: String {
-        return "hasErrors: \(hasErrors), components: \(components)"
+        return "Components: \(components)"
     }
 }

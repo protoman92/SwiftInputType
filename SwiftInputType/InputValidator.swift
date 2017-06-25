@@ -211,8 +211,19 @@ public extension InputValidatorType {
     /// - Returns: An Observable instance.
     public func rxa_validateAll<S: Sequence>(inputs: S)
         -> Observable<InputNotificationType>
-        where S.Iterator.Element: InputContentType
+        where S.Iterator.Element == InputContentType
     {
         return rxa_validate(inputs: inputs).toArray().map(InputNotification.init)
+    }
+    
+    /// Same as above, but uses a Sequence of InputContentType subclass.
+    ///
+    /// - Parameter inputs: Sequence of InputContentType.
+    /// - Returns: An Observable instance.
+    public func rxa_validateAll<S: Sequence>(inputs: S)
+        -> Observable<InputNotificationType>
+        where S.Iterator.Element: InputContentType
+    {
+        return rxa_validateAll(inputs: inputs.map(eq) as [InputContentType])
     }
 }

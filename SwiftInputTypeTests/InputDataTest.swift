@@ -32,13 +32,17 @@ final class InputDataTest: XCTestCase {
         disposeBag = nil
     }
     
+    func createInputData() -> [InputData] {
+        return (0..<10).map(toVoid).map(MockInput.init).map(InputData.init)
+    }
+    
     func test_inputData_shouldBeEmptyAtFirst() {
         // Setup
         let observer = scheduler.createObserver(String.self)
+        let data = createInputData()
         
         // When
-        Observable.from([MockInput.input1, .input2, .input3])
-            .map(InputData.init)
+        Observable.from(data)
             .flatMap({$0.inputObservable})
             .map({$0.inputContent})
             .subscribe(observer)
@@ -50,7 +54,7 @@ final class InputDataTest: XCTestCase {
         XCTAssertTrue(nextEvents.all(satisfying: {$0.isEmpty}))
     }
     
-    func test_inputValidator_shouldSucceed() {
+    func test_validateInputNormally_shouldSucceed() {
         // Setup
         let observer = scheduler.createObserver(Any.self)
         let expect = expectation(description: "Should have validated correctly")
@@ -59,30 +63,22 @@ final class InputDataTest: XCTestCase {
         Observable.from(0..<100)
             .flatMap({_ in
                 return Observable<[InputData]>.create({
-                    let input1 = MockInput(required: Bool.random(),
-                                           throwValidatorError: Bool.random())
-                    
-                    let input2 = MockInput(required: Bool.random(),
-                                           throwValidatorError: Bool.random())
-                    
-                    let input3 = MockInput(required: Bool.random(),
-                                           throwValidatorError: Bool.random())
-                    
-                    let inputData1 = InputData(for: input1)
-                    let inputData2 = InputData(for: input2)
-                    let inputData3 = InputData(for: input3)
-                    $0.onNext([inputData1, inputData2, inputData3])
+                    let data = self.createInputData()
+                    $0.onNext(data)
                     $0.onCompleted()
                     return Disposables.create()
                 })
             })
             .doOnNext({
-                $0[0].inputContent = Bool.random() ? "1" : ""
-                $0[1].inputContent = Bool.random() ? "2" : ""
-                $0[2].inputContent = Bool.random() ? "3" : ""
+                $0.enumerated().forEach({
+                    let newInput = String(describing: $0.offset)
+                    let data = $0.element
+                    data.inputContent = Bool.random() ? newInput : ""
+                })
             })
             .flatMap({data in
-                return self.validator.rxa_validateAll(inputs: data)
+                return self.validator
+                    .rxa_validateAll(inputs: data as [InputContentType])
                     .subscribeOn(qos: .background)
                     .doOnNext({
                         // Then
@@ -93,7 +89,7 @@ final class InputDataTest: XCTestCase {
                         } else {
                             let invalidInputs = data
                                 .flatMap({$0.inputModel as? MockInput})
-                                .filter({$0.throwValidatorError})
+                                .filter({$0.validationError})
                             
                             let invalidData = invalidInputs.flatMap({
                                 input -> InputData? in
@@ -113,45 +109,73 @@ final class InputDataTest: XCTestCase {
             .subscribe(observer)
             .addDisposableTo(disposeBag)
         
-        waitForExpectations(timeout: 5, handler: nil)
+        waitForExpectations(timeout: 100, handler: nil)
     }
 
     
     func test_validateLatest_shouldWork() {
         // Setup
+        let observer = scheduler.createObserver(InputNotificationComponentType.self)
+        let data = createInputData()
         
         // When
+        validator
+            .rxa_validateLatest(inputs: data)
+            .subscribe(observer)
+            .addDisposableTo(disposeBag)
         
-        // Then
+        for _ in 1...100 {
+            let randomInput = data.randomElement()!
+            randomInput.inputContent = String.random(withLength: 5)
+            
+            // Need to sleep for a bit to wait for validation delay
+            usleep(useconds_t(validationDelay * 1000 + 1))
+            
+            let events = observer.nextElements()
+            let notification = InputNotification(from: events)
+            
+            // Then
+            if data.any(satisfying: {$0.isEmpty && $0.isRequired}) {
+                let emptyError = "input.error.required".localized
+                XCTAssertTrue(notification.hasErrors)
+                XCTAssertTrue(notification.hasError(emptyError))
+            } else {
+                let invalidInputs = data
+                    .flatMap({$0.inputModel as? MockInput})
+                    .filter({$0.validationError})
+                
+                let invalidData = invalidInputs.flatMap({input -> InputData? in
+                    return data.first(where: {$0.hasIdentifier(input.identifier)})
+                })
+                
+                if invalidData.any(satisfying: {$0.isNotEmpty}) {
+                    XCTAssertTrue(notification.hasErrors)
+                }
+            }
+        }
     }
     
-    func test_requiredInputWatcher_shouldWork() {
+    func test_watchRequiredInputLatest_shouldWork() {
         // Setup
         let observer1 = scheduler.createObserver(Bool.self)
         let observer2 = scheduler.createObserver(InputContentType.self)
-        let input1 = MockInput(required: true, throwValidatorError: false)
-        let input2 = MockInput(required: true, throwValidatorError: false)
-        let input3 = MockInput(required: false, throwValidatorError: false)
-        let inputData1 = InputData(for: input1)
-        let inputData2 = InputData(for: input2)
-        let inputData3 = InputData(for: input3)
-        let inputData = [inputData1, inputData2, inputData3]
+        let data = createInputData()
         
         // When
-        validator.rxv_requiredInputFilledLatest(inputs: inputData)
+        validator.rxv_requiredInputFilledLatest(inputs: data)
             .subscribe(observer1)
             .addDisposableTo(disposeBag)
         
-        validator.rxe_emptyRequiredInputsLatest(inputs: inputData)
+        validator.rxe_emptyRequiredInputsLatest(inputs: data)
             .subscribe(observer2)
             .addDisposableTo(disposeBag)
         
         for _ in 0..<5 {
-            let randomInput = inputData.randomElement()!
+            let randomInput = data.randomElement()!
             randomInput.inputContent = Bool.random() ? "Valid" : ""
             
             // Then
-            let failed = inputData.any(satisfying: {$0.isRequired && $0.isEmpty})
+            let failed = data.any(satisfying: {$0.isRequired && $0.isEmpty})
             let lastEvent1 = observer1.events.last?.value.element!
             let events2 = observer2.nextElements()
             XCTAssertFalse(events2.isEmpty)
@@ -164,23 +188,19 @@ final class InputDataTest: XCTestCase {
 class MockInput {
     static var counter = 0
     
-    static var input1 = MockInput()
-    static var input2 = MockInput()
-    static var input3 = MockInput()
-    
     fileprivate let required: Bool
-    fileprivate let throwValidatorError: Bool
+    fileprivate let validationError: Bool
     fileprivate let count: Int
     
-    init(required: Bool, throwValidatorError: Bool) {
+    init(required: Bool, validationError: Bool) {
         MockInput.counter += 1
         self.required = required
-        self.throwValidatorError = throwValidatorError
+        self.validationError = validationError
         count = MockInput.counter
     }
     
     convenience init() {
-        self.init(required: false, throwValidatorError: false)
+        self.init(required: Bool.random(), validationError: Bool.random())
     }
 }
 
@@ -188,7 +208,7 @@ class MockInputValidator {}
 
 extension MockInput: CustomStringConvertible {
     var description: String {
-        return "\(required)-\(throwValidatorError)-\(count)"
+        return "\(required)-\(validationError)-\(count)"
     }
 }
 
@@ -208,7 +228,7 @@ extension MockInputValidator: InputValidatorType {
             .with(keyProvider: input)
             .with(valueProvider: input)
         
-        if mockInput.throwValidatorError {
+        if mockInput.validationError {
             builder.with(error: "Invalid input")
         }
         
